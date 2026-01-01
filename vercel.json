@@ -3,6 +3,10 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/api/readyz",
+      "destination": "/api/index.ts"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/index.ts"
     },

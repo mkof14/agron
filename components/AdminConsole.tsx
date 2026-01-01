@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import SystemDiagnostics from './SystemDiagnostics';
 
 type AdminView = 
   | 'dashboard' 
@@ -10,7 +11,8 @@ type AdminView =
   | 'training-repo' 
   | 'system-noc'
   | 'github-integration'
-  | 'dev-profile';
+  | 'dev-profile'
+  | 'diagnostics';
 
 type SubTab = 'REPOS' | 'DEPLOYMENTS' | 'SECURITY';
 
@@ -19,14 +21,6 @@ interface DeployLog {
   type: 'SYS' | 'GH' | 'VERCEL' | 'NOC' | 'SEC' | 'DEV';
   msg: string;
   status: 'info' | 'success' | 'warn' | 'err';
-}
-
-interface DeploymentRecord {
-  id: string;
-  env: 'PROD' | 'STAGING';
-  version: string;
-  time: string;
-  user: string;
 }
 
 interface DevProfile {
@@ -41,12 +35,9 @@ interface DevProfile {
 const AdminConsole: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeView, setActiveView] = useState<AdminView>('dev-profile');
-  const [subTab, setSubTab] = useState<SubTab>('DEPLOYMENTS');
   const [ghStatus, setGhStatus] = useState<'CONNECTED' | 'DETACHED' | 'AUTHENTICATING'>('DETACHED');
   const [githubToken, setGithubToken] = useState('');
-  const [backendHealth, setBackendHealth] = useState<'READY' | 'DOWN' | 'PENDING'>('PENDING');
   
-  // Hardcoded to mkof14/agron for the institutional profile
   const [devProfile, setDevProfile] = useState<DevProfile>(() => {
     const saved = localStorage.getItem('agron_dev_profile');
     return saved ? JSON.parse(saved) : {
@@ -61,8 +52,6 @@ const AdminConsole: React.FC = () => {
 
   const [isDeploying, setIsDeploying] = useState(false);
   const [deployProgress, setDeployProgress] = useState(0);
-  const [isStagingDeploying, setIsStagingDeploying] = useState(false);
-  const [stagingDeployProgress, setStagingDeployProgress] = useState(0);
 
   const [logs, setLogs] = useState<DeployLog[]>([
     { time: new Date().toLocaleTimeString('en-GB'), type: 'SYS', msg: 'Identity Shift Detected: agron platform core.', status: 'info' },
@@ -108,18 +97,11 @@ const AdminConsole: React.FC = () => {
     }, 100);
   };
 
-  useEffect(() => {
-    if (isAuthenticated) addLog('SYS', 'Session Established. Ready for development push.', 'info');
-  }, [isAuthenticated]);
-
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
-        <div className="w-full max-w-md bg-agron-900 border border-gray-800 p-10 shadow-2xl rounded-sm">
-           <div className="text-center mb-8">
-              <h2 className="text-2xl font-black text-white uppercase tracking-tighter">agron ADMIN</h2>
-              <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-2 font-mono">Infrastructure Authentication</p>
-           </div>
+        <div className="w-full max-w-md bg-agron-900 border border-gray-800 p-10 shadow-2xl rounded-sm text-center">
+           <h2 className="text-2xl font-black text-white uppercase tracking-tighter mb-8">agron ADMIN</h2>
            <button onClick={() => setIsAuthenticated(true)} className="w-full py-4 bg-white text-black font-black text-xs uppercase tracking-widest hover:bg-agron-accent hover:text-white transition-all shadow-xl">Establish Session</button>
         </div>
       </div>
@@ -136,6 +118,7 @@ const AdminConsole: React.FC = () => {
           <nav className="flex-1 p-4 space-y-1">
              <SidebarBtn label="Dev Profile" active={activeView === 'dev-profile'} onClick={() => setActiveView('dev-profile')} icon="🛠️" />
              <SidebarBtn label="Infrastructure" active={activeView === 'github-integration'} onClick={() => setActiveView('github-integration')} icon="🏗️" />
+             <SidebarBtn label="System Test" active={activeView === 'diagnostics'} onClick={() => setActiveView('diagnostics')} icon="⚡" />
              <SidebarBtn label="Dashboard" active={activeView === 'dashboard'} onClick={() => setActiveView('dashboard')} icon="📊" />
           </nav>
           <div className="p-6 border-t border-gray-800">
@@ -150,7 +133,10 @@ const AdminConsole: React.FC = () => {
        <main className="flex-1 flex flex-col overflow-hidden bg-grid-pattern">
           <header className="bg-black/60 backdrop-blur-xl border-b border-gray-800 px-10 py-6 flex justify-between items-center">
              <h2 className="text-lg font-black text-white uppercase tracking-tight">
-               {activeView === 'dev-profile' ? 'System Identity' : 'Platform Control'}
+               {activeView === 'dev-profile' && 'System Identity'}
+               {activeView === 'diagnostics' && 'Infrastructure Diagnostics'}
+               {activeView === 'github-integration' && 'Platform Control'}
+               {activeView === 'dashboard' && 'NOC Metrics'}
              </h2>
              <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-sm">
                 <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
@@ -158,103 +144,100 @@ const AdminConsole: React.FC = () => {
              </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto p-10 grid grid-cols-1 lg:grid-cols-12 gap-10">
-             <div className="lg:col-span-8 space-y-8">
-                {activeView === 'dev-profile' && (
-                  <section className="bg-agron-900 border border-gray-800 rounded-sm overflow-hidden shadow-2xl">
-                    <div className="p-8 border-b border-gray-800 bg-black/40 flex justify-between items-center">
-                       <h3 className="text-xl font-black text-white uppercase tracking-tighter">Identity Configuration</h3>
-                       <span className="px-3 py-1 bg-green-900/30 border border-green-500/50 text-green-500 text-[10px] font-black uppercase tracking-widest">Verified_Engineer</span>
-                    </div>
-                    <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-4 md:col-span-2">
-                           <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Repository Root (Primary)</label>
-                           <input 
-                              type="text"
-                              value={devProfile.githubRepoUrl}
-                              onChange={(e) => setDevProfile({...devProfile, githubRepoUrl: e.target.value})}
-                              className="w-full bg-black border border-gray-800 text-white font-mono text-sm p-4 rounded-sm outline-none focus:border-agron-accent"
-                           />
-                        </div>
-                        <div className="space-y-4">
-                           <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Operator Designation</label>
-                           <input type="text" value={devProfile.name} onChange={(e) => setDevProfile({...devProfile, name: e.target.value})} className="w-full bg-black border border-gray-800 text-white font-mono text-sm p-4 rounded-sm outline-none focus:border-agron-accent" />
-                        </div>
-                        <div className="space-y-4">
-                           <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">GitHub Handle</label>
-                           <input type="text" value={devProfile.githubHandle} onChange={(e) => setDevProfile({...devProfile, githubHandle: e.target.value})} className="w-full bg-black border border-gray-800 text-white font-mono text-sm p-4 rounded-sm outline-none focus:border-agron-accent" />
-                        </div>
-                        <div className="md:col-span-2 pt-4 border-t border-gray-800 text-right">
-                           <button onClick={saveDevProfile} className="px-10 py-4 bg-agron-accent text-white font-black text-xs uppercase tracking-widest hover:bg-amber-500 transition-all shadow-xl">Commit Identity Shift</button>
-                        </div>
-                    </div>
-                  </section>
-                )}
-
-                {activeView === 'github-integration' && (
-                  <section className="bg-agron-900 border border-gray-800 rounded-sm overflow-hidden shadow-2xl">
-                    <div className="p-8 border-b border-gray-800 bg-black/40 flex justify-between items-center">
-                       <h3 className="text-xl font-black text-white uppercase tracking-tighter">Infrastructure Control</h3>
-                       <div className="flex items-center gap-2">
-                          <span className={`h-2 w-2 rounded-full ${ghStatus === 'CONNECTED' ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                          <span className="text-[9px] font-mono font-black uppercase text-gray-400 tracking-widest">[{ghStatus}]</span>
-                       </div>
-                    </div>
-                    <div className="p-8 space-y-8">
-                       <div className="space-y-4">
-                          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">GitHub Personal Access Token</label>
-                          <div className="flex gap-4">
-                             <input type="password" value={githubToken} onChange={(e) => setGithubToken(e.target.value)} placeholder="ghp_****************" className="flex-1 bg-black border border-gray-800 text-white font-mono text-sm p-4 rounded-sm outline-none focus:border-agron-accent" />
-                             <button onClick={handleConnectGithub} className="px-8 bg-white text-black font-black text-xs uppercase tracking-widest hover:bg-agron-accent hover:text-white transition-all">Establish</button>
+          <div className="flex-1 overflow-y-auto p-10">
+             {activeView === 'diagnostics' ? (
+                <div className="max-w-6xl mx-auto animate-fade-in">
+                   <SystemDiagnostics />
+                </div>
+             ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                   <div className="lg:col-span-8 space-y-8">
+                      {activeView === 'dev-profile' && (
+                        <section className="bg-agron-900 border border-gray-800 rounded-sm overflow-hidden shadow-2xl">
+                          <div className="p-8 border-b border-gray-800 bg-black/40 flex justify-between items-center">
+                             <h3 className="text-xl font-black text-white uppercase tracking-tighter">Identity Configuration</h3>
+                             <span className="px-3 py-1 bg-green-900/30 border border-green-500/50 text-green-500 text-[10px] font-black uppercase tracking-widest">Verified_Engineer</span>
                           </div>
-                       </div>
-                       {ghStatus === 'CONNECTED' && (
-                         <div className="space-y-4 animate-fade-in">
-                           <div className="p-4 bg-black border border-gray-800 font-mono text-[10px] text-gray-400">
-                             <span className="text-green-500 block">✓ TARGET_ROOT: mkof14/agron</span>
-                             <span className="block">✓ IDENTITY_VERIFIED: {devProfile.engId}</span>
-                           </div>
-                           <button onClick={triggerDeploy} disabled={isDeploying} className="w-full py-4 bg-agron-accent text-white font-black text-xs uppercase tracking-widest shadow-xl hover:bg-amber-500 transition-all">
-                              {isDeploying ? `Updating Node... ${deployProgress}%` : 'Push Production Deployment'}
-                           </button>
-                         </div>
-                       )}
-                    </div>
-                  </section>
-                )}
+                          <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                              <div className="space-y-4 md:col-span-2">
+                                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Repository Root (Primary)</label>
+                                 <input 
+                                    type="text"
+                                    value={devProfile.githubRepoUrl}
+                                    onChange={(e) => setDevProfile({...devProfile, githubRepoUrl: e.target.value})}
+                                    className="w-full bg-black border border-gray-800 text-white font-mono text-sm p-4 rounded-sm outline-none focus:border-agron-accent"
+                                 />
+                              </div>
+                              <div className="space-y-4">
+                                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Operator Designation</label>
+                                 <input type="text" value={devProfile.name} onChange={(e) => setDevProfile({...devProfile, name: e.target.value})} className="w-full bg-black border border-gray-800 text-white font-mono text-sm p-4 rounded-sm outline-none focus:border-agron-accent" />
+                              </div>
+                              <div className="space-y-4">
+                                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">GitHub Handle</label>
+                                 <input type="text" value={devProfile.githubHandle} onChange={(e) => setDevProfile({...devProfile, githubHandle: e.target.value})} className="w-full bg-black border border-gray-800 text-white font-mono text-sm p-4 rounded-sm outline-none focus:border-agron-accent" />
+                              </div>
+                              <div className="md:col-span-2 pt-4 border-t border-gray-800 text-right">
+                                 <button onClick={saveDevProfile} className="px-10 py-4 bg-agron-accent text-white font-black text-xs uppercase tracking-widest hover:bg-amber-500 transition-all shadow-xl">Commit Identity Shift</button>
+                              </div>
+                          </div>
+                        </section>
+                      )}
 
-                {activeView === 'dashboard' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                     <StatBox label="Repository Health" value="OPTIMAL" />
-                     <StatBox label="Vercel Endpoint" value="ACTIVE" />
-                  </div>
-                )}
-             </div>
+                      {activeView === 'github-integration' && (
+                        <section className="bg-agron-900 border border-gray-800 rounded-sm overflow-hidden shadow-2xl">
+                          <div className="p-8 border-b border-gray-800 bg-black/40 flex justify-between items-center">
+                             <h3 className="text-xl font-black text-white uppercase tracking-tighter">Infrastructure Control</h3>
+                             <div className="flex items-center gap-2">
+                                <span className={`h-2 w-2 rounded-full ${ghStatus === 'CONNECTED' ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                                <span className="text-[9px] font-mono font-black uppercase text-gray-400 tracking-widest">[{ghStatus}]</span>
+                             </div>
+                          </div>
+                          <div className="p-8 space-y-8">
+                             <div className="space-y-4">
+                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">GitHub Personal Access Token</label>
+                                <div className="flex gap-4">
+                                   <input type="password" value={githubToken} onChange={(e) => setGithubToken(e.target.value)} placeholder="ghp_****************" className="flex-1 bg-black border border-gray-800 text-white font-mono text-sm p-4 rounded-sm outline-none focus:border-agron-accent" />
+                                   <button onClick={handleConnectGithub} className="px-8 bg-white text-black font-black text-xs uppercase tracking-widest hover:bg-agron-accent hover:text-white transition-all">Establish</button>
+                                </div>
+                             </div>
+                             {ghStatus === 'CONNECTED' && (
+                               <div className="space-y-4 animate-fade-in">
+                                 <button onClick={triggerDeploy} disabled={isDeploying} className="w-full py-4 bg-agron-accent text-white font-black text-xs uppercase tracking-widest shadow-xl hover:bg-amber-500 transition-all">
+                                    {isDeploying ? `Updating Node... ${deployProgress}%` : 'Push Production Deployment'}
+                                 </button>
+                               </div>
+                             )}
+                          </div>
+                        </section>
+                      )}
 
-             <div className="lg:col-span-4 flex flex-col h-full space-y-4">
-                <div className="flex-1 bg-agron-900 border border-gray-800 flex flex-col shadow-2xl overflow-hidden min-h-[500px]">
-                   <div className="p-4 bg-black/80 border-b border-gray-800 flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-500 font-mono">
-                       <span>agron_NOC_LOGS</span>
-                       <button onClick={() => setLogs([])} className="hover:text-white transition-colors">PURGE</button>
+                      {activeView === 'dashboard' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                           <StatBox label="Repository Health" value="OPTIMAL" />
+                           <StatBox label="Vercel Endpoint" value="ACTIVE" />
+                        </div>
+                      )}
                    </div>
-                   <div className="flex-1 p-6 font-mono text-[11px] space-y-3 overflow-y-auto bg-black/20 text-gray-500">
-                      {logs.map((log, i) => (
-                         <div key={i} className="flex gap-4 border-b border-white/5 pb-2">
-                            <span className="text-gray-700">[{log.time}]</span>
-                            <span className={`font-black uppercase flex-shrink-0 text-agron-accent`}>[{log.type}]</span>
-                            <span className={log.status === 'success' ? 'text-green-500' : 'text-gray-400'}>{log.msg}</span>
+
+                   <div className="lg:col-span-4 flex flex-col h-full space-y-4">
+                      <div className="flex-1 bg-agron-900 border border-gray-800 flex flex-col shadow-2xl overflow-hidden min-h-[500px]">
+                         <div className="p-4 bg-black/80 border-b border-gray-800 flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-500 font-mono">
+                             <span>agron_NOC_LOGS</span>
+                             <button onClick={() => setLogs([])} className="hover:text-white transition-colors">PURGE</button>
                          </div>
-                      ))}
+                         <div className="flex-1 p-6 font-mono text-[11px] space-y-3 overflow-y-auto bg-black/20 text-gray-500">
+                            {logs.map((log, i) => (
+                               <div key={i} className="flex gap-4 border-b border-white/5 pb-2">
+                                  <span className="text-gray-700">[{log.time}]</span>
+                                  <span className={`font-black uppercase flex-shrink-0 text-agron-accent`}>[{log.type}]</span>
+                                  <span className={log.status === 'success' ? 'text-green-500' : 'text-gray-400'}>{log.msg}</span>
+                                </div>
+                            ))}
+                         </div>
+                      </div>
                    </div>
                 </div>
-                <div className="p-4 bg-black/40 border border-gray-800 rounded-sm">
-                   <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">Sync Parameters</span>
-                   <div className="text-[9px] font-mono text-gray-600 space-y-1">
-                      <div>REPOS: mkof14/agron</div>
-                      <div>STATUS: NOMINAL</div>
-                   </div>
-                </div>
-             </div>
+             )}
           </div>
        </main>
     </div>
