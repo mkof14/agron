@@ -1,0 +1,16 @@
+
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/((?!assets/|favicon.ico|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.json).*)$",
+      "destination": "/index.html"
+    }
+  ],
+  "cleanUrls": true,
+  "framework": "vite"
+}

@@ -1,11 +1,26 @@
-<div align="center">
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+# AGRON — Aerial–Ground Robotics Operations Network
+### Parent Entity: Digital Invest Inc.
 
-  <h1>Built with AI Studio</h2>
+AGRON is a national-scale infrastructure platform for training, certification, simulation, and operational readiness of autonomous aerial and ground robotic systems.
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## Project Identity
+- **Project Name:** AGRON
+- **Primary Repository:** `https://github.com/mkof14/agron.git`
+- **Classification:** Infrastructure / Institutional
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+## Core Functions
+1. **Training & Certification:** Standardized Operational Readiness Levels (ORL 1-5).
+2. **Simulation Core:** Physics-deterministic mission rehearsal environments (Synthetic Training Environment - STE).
+3. **Operational Readiness:** Support for Agriculture (AgOps), Infrastructure, and Public Safety sectors.
 
-</div>
+## Technical Stack
+- **Frontend:** React 19, Tailwind CSS, Vite.
+- **Backend:** Fastify, Prisma ORM, Zod validation.
+- **AI Integration:** Google Gemini API (Flash/Pro/Image) for scenario generation and visual synthesis.
+
+## Deployment & Compliance
+This repository is managed under the Digital Invest Inc. infrastructure protocol. All deployments to Production (Node Alpha) require verified engineer credentials and adherence to the Safety Management System (SMS) framework.
+
+---
+*Notice: This system is for authorized personnel only. All access and modifications are logged via the NOC stream.*
